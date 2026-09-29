@@ -1,0 +1,16 @@
+{
+  "extends": "@repo/typescript-config/base.json",
+  "compilerOptions": {
+    "lib": ["ES2024"],
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "strictNullChecks": true,
+    "declaration": false,
+    "declarationMap": false,
+    // "paths": {
+    //   "@/*": ["./src/*"],
+    // },
+  },
+  "exclude": ["node_modules"],
+  "include": ["src"],
+}

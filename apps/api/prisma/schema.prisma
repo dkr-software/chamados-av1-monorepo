@@ -1,0 +1,51 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Chamado {
+  id             Int         @id @default(autoincrement())
+  titulo         String
+  descricao      String
+  prioridade     String      @default("Média")
+  status         String      @default("Aberto")
+  equipamentoId  Int
+  usuarioId      Int
+  dataAbertura   DateTime    @default(now())
+  dataFechamento DateTime?
+  equipamento    Equipamento @relation(fields: [equipamentoId], references: [id])
+  usuario        Usuario     @relation(fields: [usuarioId], references: [id])
+}
+
+model Equipamento {
+  id          Int       @id @default(autoincrement())
+  nome        String
+  patrimonio  String    @unique
+  tipo        String
+  descricao   String?
+  dataCriacao DateTime  @default(now())
+  chamados    Chamado[]
+}
+
+model Usuario {
+  id       Int       @id @default(autoincrement())
+  nome     String
+  email    String    @unique
+  setor    String
+  telefone String
+  chamados Chamado[]
+}
+
+model Administrador {
+  id           Int      @id @default(autoincrement())
+  nome         String
+  email        String   @unique
+  senhaHash    String
+  ativo        Boolean  @default(true)
+  dataCriacao  DateTime @default(now())
+  dataAtualizacao DateTime @updatedAt
+}
