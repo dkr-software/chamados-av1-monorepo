@@ -4,7 +4,6 @@ import { hashPassword } from "../lib/password";
 import {
   atualizarAdministradorSchema,
   buscarAdministradorSchema,
-  criarAdministradorSchema,
 } from "../models/validations/administrador.validation";
 
 export const administradoresRouter = Router();
@@ -25,15 +24,6 @@ administradoresRouter.get("/:id", async (req, res) => {
   res.json(administrador);
 });
 
-administradoresRouter.post("/", async (req, res) => {
-  const { senha, ...data } = criarAdministradorSchema.parse(req.body);
-  const administrador = await repositories.administrador.create({
-    ...data,
-    senhaHash: await hashPassword(senha),
-  });
-  res.status(201).json(administrador);
-});
-
 administradoresRouter.patch("/:id", async (req, res) => {
   const { id } = buscarAdministradorSchema.parse({ id: req.params.id });
   const { senha, ...data } = atualizarAdministradorSchema.parse(req.body);
@@ -42,6 +32,18 @@ administradoresRouter.patch("/:id", async (req, res) => {
   if (!atual) {
     res.status(404).json({ message: "Administrador não encontrado" });
     return;
+  }
+
+  if (data.email) {
+    const [existingUser, existingAdministrator] = await Promise.all([
+      repositories.usuario.findByEmail(data.email),
+      repositories.administrador.findLoginByEmail(data.email),
+    ]);
+
+    if (existingUser || (existingAdministrator && existingAdministrator.id !== id)) {
+      res.status(409).json({ message: "Já existe uma conta com este e-mail" });
+      return;
+    }
   }
 
   if (id === req.auth?.adminId && data.ativo === false) {

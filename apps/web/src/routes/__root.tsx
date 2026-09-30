@@ -5,7 +5,7 @@ function RootLayout() {
     <>
       <a className="skip-link" href="#main">Pular para o conteúdo</a>
       <main id="main"><Outlet /></main>
-      <footer className="app-footer"><Link to="/">Atende · Central de serviços</Link><span>Protótipo local — sem conexão com a API</span></footer>
+      <footer className="app-footer"><Link to="/">Atende · Central de serviços</Link><span>Central de atendimento</span></footer>
     </>
   );
 }
