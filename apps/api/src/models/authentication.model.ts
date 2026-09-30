@@ -9,9 +9,19 @@ export interface AuthenticatedAdministrator {
   email: string;
 }
 
-export interface LoginResponse {
+export interface AuthenticatedUser {
+  id: number;
+  nome: string;
+  email: string;
+}
+
+interface LoginResponseBase {
   accessToken: string;
   tokenType: "Bearer";
   expiresIn: number;
-  administrador: AuthenticatedAdministrator;
 }
+
+export type LoginResponse = LoginResponseBase & (
+  | { role: "ADMIN"; administrador: AuthenticatedAdministrator }
+  | { role: "USER"; usuario: AuthenticatedUser }
+);

@@ -4,7 +4,12 @@ import { jwtVerify } from "jose";
 declare global {
   namespace Express {
     interface Request {
-      auth?: { adminId: number; role: "ADMIN" };
+      auth?: {
+        id: number;
+        role: "ADMIN" | "USER";
+        adminId?: number;
+        userId?: number;
+      };
     }
   }
 }
@@ -29,16 +34,38 @@ export const authMiddleware: RequestHandler = async (req, res, next) => {
       new TextEncoder().encode(secret),
       { algorithms: ["HS256"], requiredClaims: ["exp", "sub"] },
     );
-    const adminId = Number(payload.sub);
+    const id = Number(payload.sub);
+    const role = payload.role;
 
-    if (!Number.isSafeInteger(adminId) || adminId <= 0 || payload.role !== "ADMIN") {
+    if (!Number.isSafeInteger(id) || id <= 0 || (role !== "ADMIN" && role !== "USER")) {
       res.status(401).json({ message: "Token inválido" });
       return;
     }
 
-    req.auth = { adminId, role: "ADMIN" };
+    // As rotas usam a identidade validada do token, nunca um ID enviado no corpo.
+    req.auth = role === "ADMIN"
+      ? { id, adminId: id, role }
+      : { id, userId: id, role };
     next();
   } catch {
     res.status(401).json({ message: "Token inválido ou expirado" });
   }
+};
+
+export const adminOnly: RequestHandler = (req, res, next) => {
+  if (req.auth?.role !== "ADMIN") {
+    res.status(403).json({ message: "Acesso permitido somente a administradores" });
+    return;
+  }
+
+  next();
+};
+
+export const userOnly: RequestHandler = (req, res, next) => {
+  if (req.auth?.role !== "USER") {
+    res.status(403).json({ message: "Acesso permitido somente a usuários" });
+    return;
+  }
+
+  next();
 };

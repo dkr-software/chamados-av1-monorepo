@@ -62,11 +62,15 @@ Com a API em execução, acesse `http://localhost:3000/docs` para explorar e tes
 
 `GET /health` e `POST /auth/login` são públicos. O login recebe `{ "email": "...", "senha": "..." }` e retorna um JWT HS256 com validade de 1 hora. Envie o token nas rotas protegidas usando `Authorization: Bearer <token>`.
 
-O projeto tem autenticação para administradores; ainda não há login para usuários regulares. O primeiro administrador é criado pelo seed acima.
+O único administrador inicial é provisionado pelo seed acima; não existe cadastro público nem rota para criar outro administrador. Somente esse administrador pode cadastrar contas comuns em `POST /api/usuarios`. A senha inicial é armazenada com bcrypt, e a pessoa pode entrar pela mesma tela de login usando seu e-mail e senha.
+
+Contas comuns recebem papel `USER` e não acessam as rotas administrativas. Elas podem consultar equipamentos disponíveis, abrir chamados em seu próprio nome e listar somente os próprios chamados em `/api/me/equipamentos` e `/api/me/chamados`.
+
+Na tela `/login`, o cliente envia as credenciais a `POST /auth/login` e guarda o token e o papel em `sessionStorage`. A sessão termina ao sair, ao fechar a aba ou quando o token expira. No desenvolvimento, o Vite encaminha `/auth` e `/api` para a API na porta `3000`; em outro ambiente, `VITE_API_URL` pode apontar para a origem da API.
 
 ## API
 
-As rotas abaixo exigem um JWT de administrador.
+As rotas de gestão abaixo exigem um JWT de administrador.
 
 ### Administradores
 
@@ -74,7 +78,6 @@ As rotas abaixo exigem um JWT de administrador.
 | --- | --- | --- |
 | `GET` | `/api/administradores` | Lista administradores |
 | `GET` | `/api/administradores/:id` | Busca administrador por ID |
-| `POST` | `/api/administradores` | Cria administrador |
 | `PATCH` | `/api/administradores/:id` | Atualiza os campos enviados |
 | `DELETE` | `/api/administradores/:id` | Remove administrador |
 
@@ -97,11 +100,12 @@ Exemplo de corpo para criar usuário:
   "nome": "Ana Silva",
   "email": "ana@example.com",
   "setor": "Secretaria",
-  "telefone": "24999998888"
+  "telefone": "24999998888",
+  "senha": "senha-segura"
 }
 ```
 
-As validações de entrada usam Zod. E-mails duplicados retornam `409`; IDs inválidos retornam `400` e registros ausentes retornam `404`.
+Essa rota exige token de administrador. A senha precisa ter pelo menos 8 caracteres e é armazenada com bcrypt, nunca retornada pela API. E-mails já usados por qualquer conta retornam `409`; IDs inválidos retornam `400` e registros ausentes retornam `404`.
 
 ### Equipamentos
 
@@ -122,6 +126,16 @@ As validações de entrada usam Zod. E-mails duplicados retornam `409`; IDs inv�
 | `POST` | `/api/chamados` | Abre chamado |
 | `PATCH` | `/api/chamados/:id` | Atualiza os campos enviados |
 | `DELETE` | `/api/chamados/:id` | Remove chamado |
+
+### Área do usuário
+
+| Método | Rota | Ação |
+| --- | --- | --- |
+| `GET` | `/api/me/equipamentos` | Lista equipamentos disponíveis |
+| `GET` | `/api/me/chamados` | Lista somente os chamados da própria conta |
+| `POST` | `/api/me/chamados` | Abre chamado para a própria conta |
+
+Essas rotas exigem um JWT com papel `USER`. O ID do solicitante é obtido do token; qualquer `usuarioId` enviado no corpo é ignorado. Usuários comuns recebem `403` nas rotas de gestão.
 
 ## Scripts
 

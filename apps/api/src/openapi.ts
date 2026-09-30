@@ -7,6 +7,7 @@ function crudPaths(
   schema: string,
   createSchema: string,
   updateSchema: string,
+  allowCreate = true,
 ) {
   const item = ref(schema);
   return {
@@ -17,7 +18,7 @@ function crudPaths(
         security: [{ bearerAuth: [] }],
         responses: { "200": { description: "Lista retornada", content: { "application/json": { schema: { type: "array", items: item } } } } },
       },
-      post: {
+      ...(allowCreate ? { post: {
         tags: [tag],
         summary: `Cria ${singular.toLowerCase()}`,
         security: [{ bearerAuth: [] }],
@@ -27,7 +28,7 @@ function crudPaths(
           "400": { $ref: "#/components/responses/BadRequest" },
           "409": { $ref: "#/components/responses/Conflict" },
         },
-      },
+      } } : {}),
     },
     [`/api/${path}/{id}`]: {
       parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer", minimum: 1 } }],
@@ -71,7 +72,7 @@ export const openApiDocument = {
   info: {
     title: "Chamados AV1 API",
     version: "1.0.0",
-    description: "API de chamados, equipamentos, usuários e administradores.",
+    description: "API de chamados, equipamentos, usuários e administradores com papéis separados.",
   },
   servers: [{ url: "http://localhost:3000" }],
   tags: [
@@ -92,7 +93,7 @@ export const openApiDocument = {
     "/auth/login": {
       post: {
         tags: ["Autenticação"],
-        summary: "Autentica um administrador",
+        summary: "Autentica um administrador ou usuário",
         requestBody: {
           required: true,
           content: {
@@ -119,7 +120,9 @@ export const openApiDocument = {
                     accessToken: { type: "string" },
                     tokenType: { type: "string", example: "Bearer" },
                     expiresIn: { type: "integer", example: 3600 },
+                    role: { type: "string", enum: ["ADMIN", "USER"] },
                     administrador: { $ref: "#/components/schemas/Administrador" },
+                    usuario: { $ref: "#/components/schemas/Usuario" },
                   },
                 },
               },
@@ -129,7 +132,30 @@ export const openApiDocument = {
         },
       },
     },
-    ...crudPaths("administradores", "Administradores", "administrador", "Administrador", "NovoAdministrador", "AtualizarAdministrador"),
+    "/api/me/equipamentos": {
+      get: {
+        tags: ["Usuários"],
+        summary: "Lista equipamentos disponíveis para o usuário autenticado",
+        security: [{ bearerAuth: [] }],
+        responses: { "200": { description: "Lista retornada" }, "403": { description: "Rota exclusiva para usuários comuns" } },
+      },
+    },
+    "/api/me/chamados": {
+      get: {
+        tags: ["Usuários"],
+        summary: "Lista somente os chamados do usuário autenticado",
+        security: [{ bearerAuth: [] }],
+        responses: { "200": { description: "Lista retornada" }, "403": { description: "Rota exclusiva para usuários comuns" } },
+      },
+      post: {
+        tags: ["Usuários"],
+        summary: "Abre chamado para o usuário autenticado",
+        security: [{ bearerAuth: [] }],
+        requestBody: { required: true, content: { "application/json": { schema: ref("NovoChamadoUsuario") } } },
+        responses: { "201": { description: "Chamado criado" }, "400": { $ref: "#/components/responses/BadRequest" }, "403": { description: "Rota exclusiva para usuários comuns" } },
+      },
+    },
+    ...crudPaths("administradores", "Administradores", "administrador", "Administrador", "NovoAdministrador", "AtualizarAdministrador", false),
     ...crudPaths("chamados", "Chamados", "chamado", "Chamado", "NovoChamado", "AtualizarChamado"),
     ...crudPaths("equipamentos", "Equipamentos", "equipamento", "Equipamento", "NovoEquipamento", "AtualizarEquipamento"),
     ...crudPaths("usuarios", "Usuários", "usuário", "Usuario", "NovoUsuario", "AtualizarUsuario"),
@@ -174,6 +200,10 @@ export const openApiDocument = {
         type: "object", required: ["titulo", "descricao", "equipamentoId", "usuarioId"],
         properties: { titulo: { type: "string" }, descricao: { type: "string" }, equipamentoId: { type: "integer", minimum: 1 }, usuarioId: { type: "integer", minimum: 1 } },
       },
+      NovoChamadoUsuario: {
+        type: "object", required: ["titulo", "descricao", "equipamentoId"],
+        properties: { titulo: { type: "string" }, descricao: { type: "string" }, equipamentoId: { type: "integer", minimum: 1 } },
+      },
       AtualizarChamado: {
         type: "object",
         properties: {
@@ -208,8 +238,8 @@ export const openApiDocument = {
         properties: { id: { type: "integer" }, nome: { type: "string" }, email: { type: "string", format: "email" }, setor: { type: "string" }, telefone: { type: "string" } },
       },
       NovoUsuario: {
-        type: "object", required: ["nome", "email", "setor", "telefone"],
-        properties: { nome: { type: "string" }, email: { type: "string", format: "email" }, setor: { type: "string" }, telefone: { type: "string", minLength: 8, maxLength: 20 } },
+        type: "object", required: ["nome", "email", "setor", "telefone", "senha"],
+        properties: { nome: { type: "string" }, email: { type: "string", format: "email" }, setor: { type: "string" }, telefone: { type: "string", minLength: 8, maxLength: 20 }, senha: { type: "string", format: "password", minLength: 8, maxLength: 72 } },
       },
       AtualizarUsuario: {
         type: "object", minProperties: 1,

@@ -1,6 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { authenticatedRequest, clearAuthSession, getAuthSession } from "../lib/auth";
+import type { AuthSession } from "../lib/auth";
+import { UserPortal } from "./-user-portal";
 
 type View = "dashboard" | "chamados" | "pessoas" | "equipamentos";
 type TicketStatus = "Aberto" | "Em atendimento" | "Aguardando retorno" | "Resolvido";
@@ -11,6 +14,20 @@ type User = {
   name: string;
   email: string;
   sector: string;
+};
+
+type ApiUser = {
+  id: number;
+  nome: string;
+  email: string;
+  setor: string;
+};
+
+type ApiEquipment = {
+  id: number;
+  nome: string;
+  patrimonio: string;
+  tipo: string;
 };
 
 type Equipment = {
@@ -76,12 +93,23 @@ function initials(name: string) {
   return name.split(" ").slice(0, 2).map((part) => part[0]).join("").toUpperCase();
 }
 
-export const Route = createFileRoute("/")({ component: ServiceDesk });
+export const Route = createFileRoute("/")({ component: Home });
 
-function ServiceDesk() {
+function Home() {
+  const session = getAuthSession();
+
+  return session?.account.role === "USER"
+    ? <UserPortal session={session} />
+    : <ServiceDesk session={session} />;
+}
+
+function ServiceDesk({ session }: { session: AuthSession | null }) {
+  const authenticatedAccount = session?.account ?? null;
   const [view, setView] = useState<View>("dashboard");
-  const [users, setUsers] = useState<User[]>(initialUsers);
+  const [users] = useState<User[]>(initialUsers);
+  const [accounts, setAccounts] = useState<User[]>([]);
   const [equipment, setEquipment] = useState<Equipment[]>(initialEquipment);
+  const [accountEquipment, setAccountEquipment] = useState<ApiEquipment[]>([]);
   const [tickets, setTickets] = useState<Ticket[]>(initialTickets);
   const [selectedTicketId, setSelectedTicketId] = useState(1842);
   const [query, setQuery] = useState("");
@@ -89,7 +117,7 @@ function ServiceDesk() {
   const [isComposerOpen, setIsComposerOpen] = useState(false);
   const [notice, setNotice] = useState("");
   const [ticketDraft, setTicketDraft] = useState({ title: "", description: "", userId: 1, equipmentId: 1, priority: "Média" as Priority });
-  const [userDraft, setUserDraft] = useState({ name: "", email: "", sector: "" });
+  const [userDraft, setUserDraft] = useState({ name: "", email: "", sector: "", phone: "", password: "" });
   const [equipmentDraft, setEquipmentDraft] = useState({ name: "", asset: "", kind: "" });
 
   const selectedTicket = tickets.find((ticket) => ticket.id === selectedTicketId) ?? tickets[0];
@@ -109,6 +137,57 @@ function ServiceDesk() {
     window.setTimeout(() => setNotice(""), 2800);
   };
 
+  useEffect(() => {
+    if (authenticatedAccount?.role !== "ADMIN") {
+      return;
+    }
+
+    let isCurrent = true;
+    authenticatedRequest<ApiUser[]>("/api/usuarios")
+      .then((loadedAccounts) => {
+        if (isCurrent) {
+          setAccounts(loadedAccounts.map((account) => ({
+            id: account.id,
+            name: account.nome,
+            email: account.email,
+            sector: account.setor,
+          })));
+        }
+      })
+      .catch((error: unknown) => {
+        if (isCurrent) {
+          setNotice(error instanceof Error ? error.message : "Não foi possível carregar as contas.");
+        }
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [authenticatedAccount?.role]);
+
+  useEffect(() => {
+    if (authenticatedAccount?.role !== "ADMIN") {
+      return;
+    }
+
+    let isCurrent = true;
+    authenticatedRequest<ApiEquipment[]>("/api/equipamentos")
+      .then((loadedEquipment) => {
+        if (isCurrent) {
+          setAccountEquipment(loadedEquipment);
+        }
+      })
+      .catch((error: unknown) => {
+        if (isCurrent) {
+          setNotice(error instanceof Error ? error.message : "Não foi possível carregar os equipamentos.");
+        }
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [authenticatedAccount?.role]);
+
   const updateTicket = (id: number, changes: Partial<Ticket>) => {
     setTickets((current) => current.map((ticket) => (ticket.id === id ? { ...ticket, ...changes, updatedAt: "agora" } : ticket)));
   };
@@ -125,16 +204,61 @@ function ServiceDesk() {
     showNotice(`Chamado #${newTicket.id} criado apenas nesta demonstração.`);
   };
 
-  const createUser = (event: FormEvent<HTMLFormElement>) => {
+  const createUser = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const nextUser = { id: Math.max(...users.map((user) => user.id)) + 1, ...userDraft };
-    setUsers((current) => [nextUser, ...current]);
-    setUserDraft({ name: "", email: "", sector: "" });
-    showNotice(`${nextUser.name} foi adicionado à lista local.`);
+
+    if (authenticatedAccount?.role !== "ADMIN") {
+      showNotice("Entre como administrador para criar contas.");
+      return;
+    }
+
+    try {
+      const createdUser = await authenticatedRequest<{ id: number; nome: string; email: string; setor: string }> (
+        "/api/usuarios",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            nome: userDraft.name,
+            email: userDraft.email,
+            setor: userDraft.sector,
+            telefone: userDraft.phone,
+            senha: userDraft.password,
+          }),
+        },
+      );
+      const nextUser: User = { id: createdUser.id, name: createdUser.nome, email: createdUser.email, sector: createdUser.setor };
+      setAccounts((current) => [nextUser, ...current.filter((user) => user.id !== nextUser.id)]);
+      setUserDraft({ name: "", email: "", sector: "", phone: "", password: "" });
+      showNotice(`A conta de ${nextUser.name} foi criada. Ela já pode entrar com o e-mail e a senha inicial.`);
+    } catch (error) {
+      showNotice(error instanceof Error ? error.message : "Não foi possível criar a conta.");
+    }
   };
 
-  const createEquipment = (event: FormEvent<HTMLFormElement>) => {
+  const createEquipment = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    if (authenticatedAccount?.role === "ADMIN") {
+      try {
+        const createdEquipment = await authenticatedRequest<ApiEquipment>("/api/equipamentos", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            nome: equipmentDraft.name,
+            patrimonio: equipmentDraft.asset,
+            tipo: equipmentDraft.kind,
+          }),
+        });
+        setAccountEquipment((current) => [createdEquipment, ...current]);
+        setEquipmentDraft({ name: "", asset: "", kind: "" });
+        showNotice(`${createdEquipment.nome} foi cadastrado.`);
+      } catch (error) {
+        showNotice(error instanceof Error ? error.message : "Não foi possível cadastrar o equipamento.");
+      }
+      return;
+    }
+
     const nextEquipment: Equipment = { id: Math.max(...equipment.map((item) => item.id)) + 1, ...equipmentDraft, owner: "Sem responsável" };
     setEquipment((current) => [nextEquipment, ...current]);
     setEquipmentDraft({ name: "", asset: "", kind: "" });
@@ -143,6 +267,9 @@ function ServiceDesk() {
 
   const ticketRequester = selectedTicket ? users.find((user) => user.id === selectedTicket.userId) : undefined;
   const ticketEquipment = selectedTicket ? equipment.find((item) => item.id === selectedTicket.equipmentId) : undefined;
+  const displayedEquipment = authenticatedAccount?.role === "ADMIN"
+    ? accountEquipment.map((item) => ({ id: item.id, name: item.nome, asset: item.patrimonio, kind: item.tipo, owner: "Sem responsável" }))
+    : equipment;
   const navigation = [["dashboard", "Visão geral"], ["chamados", "Chamados"], ["pessoas", "Pessoas"], ["equipamentos", "Equipamentos"]] as const;
 
   return (
@@ -155,13 +282,13 @@ function ServiceDesk() {
         <nav className="desk-nav">
           {navigation.map(([itemView, label]) => <button className={`nav-item ${view === itemView ? "is-active" : ""}`} key={itemView} onClick={() => setView(itemView)} type="button"><span>{label}</span>{itemView === "chamados" && <small>{openTickets.length}</small>}</button>)}
         </nav>
-        <div className="sidebar-bottom"><div className="admin-avatar" aria-hidden="true">RS</div><div><strong>Ruan Silva</strong><span>Administrador</span></div></div>
+        <div className="sidebar-bottom"><div className="admin-avatar" aria-hidden="true">{authenticatedAccount ? initials(authenticatedAccount.nome) : "RS"}</div><div><strong>{authenticatedAccount?.nome ?? "Ruan Silva"}</strong><span>{authenticatedAccount ? "Administrador" : "Demonstração"}</span></div></div>
       </aside>
 
       <main className="desk-main">
         <header className="desk-topbar">
-          <div><p className="crumb">Central / {navigation.find(([itemView]) => itemView === view)?.[1]}</p><h1>{view === "dashboard" ? "Bom dia, Ruan." : navigation.find(([itemView]) => itemView === view)?.[1]}</h1></div>
-          <div className="topbar-actions"><span className="demo-badge">Dados de demonstração</span><button className="primary-button" onClick={() => { setView("chamados"); setIsComposerOpen(true); }} type="button"><span aria-hidden="true">+</span> Novo chamado</button></div>
+          <div><p className="crumb">Central / {navigation.find(([itemView]) => itemView === view)?.[1]}</p><h1>{view === "dashboard" ? `Bom dia, ${authenticatedAccount?.nome.split(" ")[0] ?? "Ruan"}.` : navigation.find(([itemView]) => itemView === view)?.[1]}</h1></div>
+          <div className="topbar-actions">{!authenticatedAccount && <span className="demo-badge">Dados de demonstração</span>}<button className="primary-button" onClick={() => { setView("chamados"); setIsComposerOpen(true); }} type="button"><span aria-hidden="true">+</span> Novo chamado</button>{authenticatedAccount && <button className="quiet-button" onClick={() => { clearAuthSession(); window.location.assign("/login"); }} type="button">Sair</button>}</div>
         </header>
         {notice && <div className="toast" role="status">{notice}</div>}
 
@@ -222,13 +349,37 @@ function ServiceDesk() {
         </section>}
 
         {view === "pessoas" && <section className="page-enter management-view" aria-labelledby="users-heading">
-          <div className="view-heading"><div><p className="section-kicker">CADASTRO LOCAL</p><h2 id="users-heading">Pessoas solicitantes</h2></div><span>{users.length} cadastradas</span></div>
-          <div className="management-layout"><form className="entity-form" onSubmit={createUser}><p className="section-kicker">NOVO SOLICITANTE</p><h3>Adicionar pessoa</h3><label className="field">Nome completo<input required value={userDraft.name} onChange={(event) => setUserDraft({ ...userDraft, name: event.target.value })} placeholder="Ex.: Camila Souza" /></label><label className="field">E-mail<input required type="email" value={userDraft.email} onChange={(event) => setUserDraft({ ...userDraft, email: event.target.value })} placeholder="camila@empresa.com" /></label><label className="field">Setor<input required value={userDraft.sector} onChange={(event) => setUserDraft({ ...userDraft, sector: event.target.value })} placeholder="Ex.: Administrativo" /></label><button className="primary-button full-button" type="submit">Adicionar pessoa</button></form><div className="directory-list">{users.map((user) => <article className="directory-row" key={user.id}><span className="person-avatar large">{initials(user.name)}</span><div><h3>{user.name}</h3><p>{user.email}</p></div><span>{user.sector}</span></article>)}</div></div>
+          <div className="view-heading"><div><p className="section-kicker">CONTAS DE ACESSO</p><h2 id="users-heading">Pessoas solicitantes</h2></div><span>{authenticatedAccount?.role === "ADMIN" ? `${accounts.length} cadastradas` : "Acesso restrito"}</span></div>
+          <div className="management-layout">
+            {authenticatedAccount?.role === "ADMIN" ? (
+              <form className="entity-form" onSubmit={createUser}>
+                <p className="section-kicker">NOVA CONTA</p><h3>Criar acesso de solicitante</h3>
+                <label className="field">Nome completo<input required value={userDraft.name} onChange={(event) => setUserDraft({ ...userDraft, name: event.target.value })} autoComplete="name" /></label>
+                <label className="field">E-mail<input required type="email" value={userDraft.email} onChange={(event) => setUserDraft({ ...userDraft, email: event.target.value })} autoComplete="email" /></label>
+                <label className="field">Setor<input required value={userDraft.sector} onChange={(event) => setUserDraft({ ...userDraft, sector: event.target.value })} /></label>
+                <label className="field">Telefone<input required type="tel" value={userDraft.phone} onChange={(event) => setUserDraft({ ...userDraft, phone: event.target.value })} autoComplete="tel" /></label>
+                <label className="field">Senha inicial<input required type="password" minLength={8} maxLength={72} value={userDraft.password} onChange={(event) => setUserDraft({ ...userDraft, password: event.target.value })} autoComplete="new-password" /></label>
+                <button className="primary-button full-button" type="submit">Criar conta</button>
+              </form>
+            ) : (
+              <div className="entity-form"><p className="section-kicker">ACESSO RESTRITO</p><h3>Somente o administrador pode criar contas</h3><p className="detail-description">Entre com a conta administrativa para cadastrar novos solicitantes.</p><Link className="primary-button full-button" to="/login">Entrar como administrador</Link></div>
+            )}
+            <div className="directory-list">{authenticatedAccount?.role === "ADMIN" ? accounts.map((user) => <article className="directory-row" key={user.id}><span className="person-avatar large">{initials(user.name)}</span><div><h3>{user.name}</h3><p>{user.email}</p></div><span>{user.sector}</span></article>) : <p className="empty-state">Lista disponível para administradores.</p>}</div>
+          </div>
         </section>}
 
         {view === "equipamentos" && <section className="page-enter management-view" aria-labelledby="equipment-heading">
-          <div className="view-heading"><div><p className="section-kicker">INVENTÁRIO LOCAL</p><h2 id="equipment-heading">Equipamentos</h2></div><span>{equipment.length} cadastrados</span></div>
-          <div className="management-layout"><form className="entity-form" onSubmit={createEquipment}><p className="section-kicker">NOVO ATIVO</p><h3>Adicionar equipamento</h3><label className="field">Nome<input required value={equipmentDraft.name} onChange={(event) => setEquipmentDraft({ ...equipmentDraft, name: event.target.value })} placeholder="Ex.: Notebook Lenovo" /></label><label className="field">Patrimônio<input required value={equipmentDraft.asset} onChange={(event) => setEquipmentDraft({ ...equipmentDraft, asset: event.target.value })} placeholder="Ex.: NT-0422" /></label><label className="field">Tipo<input required value={equipmentDraft.kind} onChange={(event) => setEquipmentDraft({ ...equipmentDraft, kind: event.target.value })} placeholder="Ex.: Notebook" /></label><button className="primary-button full-button" type="submit">Adicionar equipamento</button></form><div className="directory-list equipment-list">{equipment.map((item) => <article className="directory-row" key={item.id}><span className="asset-mark">{item.kind.slice(0, 1)}</span><div><h3>{item.name}</h3><p>{item.asset} · {item.owner}</p></div><span>{item.kind}</span></article>)}</div></div>
+          <div className="view-heading"><div><p className="section-kicker">{authenticatedAccount ? "INVENTÁRIO" : "INVENTÁRIO LOCAL"}</p><h2 id="equipment-heading">Equipamentos</h2></div><span>{displayedEquipment.length} cadastrados</span></div>
+          <div className="management-layout">
+            <form className="entity-form" onSubmit={createEquipment}>
+              <p className="section-kicker">NOVO ATIVO</p><h3>Adicionar equipamento</h3>
+              <label className="field">Nome<input required value={equipmentDraft.name} onChange={(event) => setEquipmentDraft({ ...equipmentDraft, name: event.target.value })} placeholder="Ex.: Notebook Lenovo" /></label>
+              <label className="field">Patrimônio<input required value={equipmentDraft.asset} onChange={(event) => setEquipmentDraft({ ...equipmentDraft, asset: event.target.value })} placeholder="Ex.: NT-0422" /></label>
+              <label className="field">Tipo<select required value={equipmentDraft.kind} onChange={(event) => setEquipmentDraft({ ...equipmentDraft, kind: event.target.value })}><option value="" disabled>Selecione um tipo</option><option>Computador</option><option>Impressora</option><option>Scanner</option><option>Monitor</option><option>Celular</option></select></label>
+              <button className="primary-button full-button" type="submit">Adicionar equipamento</button>
+            </form>
+            <div className="directory-list equipment-list">{displayedEquipment.map((item) => <article className="directory-row" key={item.id}><span className="asset-mark">{item.kind.slice(0, 1)}</span><div><h3>{item.name}</h3><p>{item.asset} · {item.owner}</p></div><span>{item.kind}</span></article>)}</div>
+          </div>
         </section>}
       </main>
     </div>

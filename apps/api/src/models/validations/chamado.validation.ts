@@ -18,6 +18,12 @@ export const criarChamadoSchema = chamadoSchema.pick({
   usuarioId: true,
 });
 
+export const criarChamadoUsuarioSchema = chamadoSchema.pick({
+  titulo: true,
+  descricao: true,
+  equipamentoId: true,
+});
+
 export const atualizarChamadoSchema = chamadoSchema.partial();
 
 export const buscarChamadoSchema = z.object({
