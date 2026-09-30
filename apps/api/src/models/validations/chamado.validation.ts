@@ -3,8 +3,8 @@ import { z } from "zod";
 const chamadoFields = {
   titulo: z.string().trim().min(1, "O título é obrigatório"),
   descricao: z.string().trim().min(1, "A descrição é obrigatória"),
-  prioridade: z.enum(["Baixa", "Média", "Alta"]),
-  status: z.enum(["Aberto", "Em Andamento", "Fechado"]),
+  prioridade: z.enum(["Baixa", "Média", "Alta", "Crítica"]),
+  status: z.enum(["Aberto", "Em atendimento", "Aguardando retorno", "Resolvido", "Em Andamento", "Fechado"]),
   equipamentoId: z.number().int().positive("O ID do equipamento deve ser um número positivo"),
   usuarioId: z.number().int().positive("O ID do usuário deve ser um número positivo"),
 };
@@ -16,7 +16,7 @@ export const criarChamadoSchema = chamadoSchema.pick({
   descricao: true,
   equipamentoId: true,
   usuarioId: true,
-});
+}).extend({ prioridade: chamadoFields.prioridade.optional() });
 
 export const criarChamadoUsuarioSchema = chamadoSchema.pick({
   titulo: true,

@@ -190,15 +190,15 @@ export const openApiDocument = {
         type: "object",
         properties: {
           id: { type: "integer" }, titulo: { type: "string" }, descricao: { type: "string" },
-          prioridade: { type: "string", enum: ["Baixa", "Média", "Alta"] },
-          status: { type: "string", enum: ["Aberto", "Em Andamento", "Fechado"] },
+          prioridade: { type: "string", enum: ["Baixa", "Média", "Alta", "Crítica"] },
+          status: { type: "string", enum: ["Aberto", "Em atendimento", "Aguardando retorno", "Resolvido", "Em Andamento", "Fechado"] },
           equipamentoId: { type: "integer" }, usuarioId: { type: "integer" },
           dataAbertura: { type: "string", format: "date-time" }, dataFechamento: { type: "string", format: "date-time", nullable: true },
         },
       },
       NovoChamado: {
         type: "object", required: ["titulo", "descricao", "equipamentoId", "usuarioId"],
-        properties: { titulo: { type: "string" }, descricao: { type: "string" }, equipamentoId: { type: "integer", minimum: 1 }, usuarioId: { type: "integer", minimum: 1 } },
+        properties: { titulo: { type: "string" }, descricao: { type: "string" }, prioridade: { type: "string", enum: ["Baixa", "Média", "Alta", "Crítica"] }, equipamentoId: { type: "integer", minimum: 1 }, usuarioId: { type: "integer", minimum: 1 } },
       },
       NovoChamadoUsuario: {
         type: "object", required: ["titulo", "descricao", "equipamentoId"],
@@ -207,8 +207,8 @@ export const openApiDocument = {
       AtualizarChamado: {
         type: "object",
         properties: {
-          titulo: { type: "string" }, descricao: { type: "string" }, prioridade: { type: "string", enum: ["Baixa", "Média", "Alta"] },
-          status: { type: "string", enum: ["Aberto", "Em Andamento", "Fechado"] }, equipamentoId: { type: "integer", minimum: 1 }, usuarioId: { type: "integer", minimum: 1 },
+          titulo: { type: "string" }, descricao: { type: "string" }, prioridade: { type: "string", enum: ["Baixa", "Média", "Alta", "Crítica"] },
+          status: { type: "string", enum: ["Aberto", "Em atendimento", "Aguardando retorno", "Resolvido", "Em Andamento", "Fechado"] }, equipamentoId: { type: "integer", minimum: 1 }, usuarioId: { type: "integer", minimum: 1 },
         },
       },
       Equipamento: {

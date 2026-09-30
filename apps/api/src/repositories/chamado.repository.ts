@@ -9,7 +9,7 @@ export class ChamadoRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   findAll() {
-    return this.prisma.chamado.findMany();
+    return this.prisma.chamado.findMany({ orderBy: { dataAbertura: "desc" } });
   }
 
   findById(id: number) {
@@ -17,7 +17,10 @@ export class ChamadoRepository {
   }
 
   findByUsuarioId(usuarioId: number) {
-    return this.prisma.chamado.findMany({ where: { usuarioId } });
+    return this.prisma.chamado.findMany({
+      where: { usuarioId },
+      orderBy: { dataAbertura: "desc" },
+    });
   }
 
   create(data: z.infer<typeof criarChamadoSchema>) {
