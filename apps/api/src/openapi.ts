@@ -132,6 +132,38 @@ export const openApiDocument = {
         },
       },
     },
+    "/auth/register": {
+      post: {
+        tags: ["Autenticação"],
+        summary: "Cria uma conta de solicitante e inicia a sessão",
+        requestBody: {
+          required: true,
+          content: { "application/json": { schema: ref("NovoUsuario") } },
+        },
+        responses: {
+          "201": {
+            description: "Conta criada e autenticada",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    accessToken: { type: "string" },
+                    tokenType: { type: "string", example: "Bearer" },
+                    expiresIn: { type: "integer", example: 3600 },
+                    role: { type: "string", enum: ["USER"] },
+                    usuario: { $ref: "#/components/schemas/Usuario" },
+                  },
+                },
+              },
+            },
+          },
+          "400": { $ref: "#/components/responses/BadRequest" },
+          "409": { $ref: "#/components/responses/Conflict" },
+          "503": { description: "Autenticação não configurada" },
+        },
+      },
+    },
     "/api/me/equipamentos": {
       get: {
         tags: ["Usuários"],

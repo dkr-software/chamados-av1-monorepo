@@ -29,5 +29,3 @@ export const atualizarChamadoSchema = chamadoSchema.partial();
 export const buscarChamadoSchema = z.object({
   id: z.coerce.number().int().positive("O ID do chamado deve ser um número positivo"),
 });
-
-export const deletarChamadoSchema = buscarChamadoSchema;

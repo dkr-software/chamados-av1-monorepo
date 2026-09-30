@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
-import type { FormEvent } from "react";
-import { AuthSession, authenticatedRequest, clearAuthSession } from "../lib/auth";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import type { AuthSession } from "../lib/auth";
+import { authenticatedRequest, clearAuthSession } from "../lib/auth";
+import { userTicketFormSchema } from "../lib/form-schemas";
 
 type Equipment = {
   id: number;
@@ -26,13 +29,14 @@ function formatDate(value: string) {
 export function UserPortal({ session }: { session: AuthSession }) {
   const [equipments, setEquipments] = useState<Equipment[]>([]);
   const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [equipmentId, setEquipmentId] = useState("");
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
   const [notice, setNotice] = useState("");
   const [loadError, setLoadError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const ticketForm = useForm({
+    resolver: zodResolver(userTicketFormSchema),
+    defaultValues: { title: "", description: "", equipmentId: "" },
+  });
+  const isSubmitting = ticketForm.formState.isSubmitting;
 
   useEffect(() => {
     let isCurrent = true;
@@ -45,7 +49,7 @@ export function UserPortal({ session }: { session: AuthSession }) {
         if (isCurrent) {
           setEquipments(loadedEquipments);
           setTickets(loadedTickets);
-          setEquipmentId(loadedEquipments[0] ? String(loadedEquipments[0].id) : "");
+          ticketForm.setValue("equipmentId", loadedEquipments[0] ? String(loadedEquipments[0].id) : "");
         }
       })
       .catch((error: unknown) => {
@@ -64,10 +68,8 @@ export function UserPortal({ session }: { session: AuthSession }) {
     };
   }, [session.accessToken]);
 
-  const submitTicket = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const submitTicket = ticketForm.handleSubmit(async ({ title, description, equipmentId }) => {
     setNotice("");
-    setIsSubmitting(true);
 
     try {
       const ticket = await authenticatedRequest<Ticket>("/api/me/chamados", {
@@ -80,15 +82,12 @@ export function UserPortal({ session }: { session: AuthSession }) {
         }),
       });
       setTickets((current) => [ticket, ...current]);
-      setTitle("");
-      setDescription("");
+      ticketForm.reset({ title: "", description: "", equipmentId });
       setNotice("Chamado registrado.");
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Não foi possível registrar o chamado.");
-    } finally {
-      setIsSubmitting(false);
     }
-  };
+  });
 
   const signOut = () => {
     clearAuthSession();
@@ -122,17 +121,19 @@ export function UserPortal({ session }: { session: AuthSession }) {
           {notice && <p className="auth-message" role="status">{notice}</p>}
 
           <div className="user-portal-layout">
-            <form className="entity-form" onSubmit={submitTicket}>
+            <form className="entity-form" noValidate onSubmit={submitTicket}>
               <p className="section-kicker">NOVA SOLICITAÇÃO</p>
               <h3>Abrir chamado</h3>
-              <label className="field" htmlFor="portal-title">Assunto<input id="portal-title" required value={title} onChange={(event) => setTitle(event.target.value)} /></label>
+              <label className="field" htmlFor="portal-title">Assunto<input id="portal-title" {...ticketForm.register("title")} aria-invalid={Boolean(ticketForm.formState.errors.title)} />{ticketForm.formState.errors.title?.message && <span className="auth-field-error">{ticketForm.formState.errors.title.message}</span>}</label>
               <label className="field" htmlFor="portal-equipment">Equipamento
-                <select id="portal-equipment" required disabled={!equipments.length || isLoading} value={equipmentId} onChange={(event) => setEquipmentId(event.target.value)}>
+                <select id="portal-equipment" {...ticketForm.register("equipmentId")} disabled={!equipments.length || isLoading} aria-invalid={Boolean(ticketForm.formState.errors.equipmentId)}>
+                  {!equipments.length && <option value="">Selecione um equipamento</option>}
                   {equipments.map((equipment) => <option key={equipment.id} value={equipment.id}>{equipment.nome} · {equipment.patrimonio}</option>)}
                 </select>
               </label>
+              {ticketForm.formState.errors.equipmentId?.message && <span className="auth-field-error">{ticketForm.formState.errors.equipmentId.message}</span>}
               {!isLoading && !equipments.length && <p className="field-hint">Nenhum equipamento está cadastrado. Peça ao administrador para adicioná-lo.</p>}
-              <label className="field" htmlFor="portal-description">Descrição<textarea id="portal-description" required rows={4} value={description} onChange={(event) => setDescription(event.target.value)} /></label>
+              <label className="field" htmlFor="portal-description">Descrição<textarea id="portal-description" {...ticketForm.register("description")} rows={4} aria-invalid={Boolean(ticketForm.formState.errors.description)} />{ticketForm.formState.errors.description?.message && <span className="auth-field-error">{ticketForm.formState.errors.description.message}</span>}</label>
               <button className="primary-button full-button" disabled={isLoading || isSubmitting || !equipments.length} type="submit">{isSubmitting ? "Enviando..." : "Enviar chamado"}</button>
             </form>
 

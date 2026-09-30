@@ -1,8 +1,3 @@
-export interface LoginRequest {
-  email: string;
-  senha: string;
-}
-
 export interface AuthenticatedAdministrator {
   id: number;
   nome: string;

@@ -14,5 +14,3 @@ export const atualizarUsuarioSchema = z.object(usuarioFields).partial();
 export const buscarUsuarioSchema = z.object({
   id: z.coerce.number().int().positive("O ID do usuário deve ser um número positivo"),
 });
-
-export const deletarUsuarioSchema = buscarUsuarioSchema;

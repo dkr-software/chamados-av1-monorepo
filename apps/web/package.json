@@ -10,11 +10,14 @@
     "lint": "eslint \"src/**/*.{ts,tsx}\""
   },
   "dependencies": {
-    "@repo/ui": "*",
+    "@hookform/resolvers": "^5.9.1",
     "@repo/tailwind-config": "*",
+    "@repo/ui": "*",
     "@tanstack/react-router": "^1.170.40",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "react-hook-form": "^7.89.0",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@repo/eslint-config": "*",

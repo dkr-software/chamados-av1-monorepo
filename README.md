@@ -60,9 +60,9 @@ Com a API em execução, acesse `http://localhost:3000/docs` para explorar e tes
 
 ## Autenticação
 
-`GET /health` e `POST /auth/login` são públicos. O login recebe `{ "email": "...", "senha": "..." }` e retorna um JWT HS256 com validade de 1 hora. Envie o token nas rotas protegidas usando `Authorization: Bearer <token>`.
+`GET /health`, `POST /auth/login` e `POST /auth/register` são públicos. O login recebe `{ "email": "...", "senha": "..." }` e retorna um JWT HS256 com validade de 1 hora. O cadastro recebe `nome`, `email`, `setor`, `telefone` e `senha`, cria uma conta `USER` e já retorna um JWT para iniciar a sessão. Envie o token nas rotas protegidas usando `Authorization: Bearer <token>`.
 
-O único administrador inicial é provisionado pelo seed acima; não existe cadastro público nem rota para criar outro administrador. Somente esse administrador pode cadastrar contas comuns em `POST /api/usuarios`. A senha inicial é armazenada com bcrypt, e a pessoa pode entrar pela mesma tela de login usando seu e-mail e senha.
+O único administrador inicial é provisionado pelo seed acima; não existe cadastro público de administrador nem rota para criar outro administrador. Pessoas também podem criar as próprias contas de solicitante em `/cadastro`; somente administradores podem usar `POST /api/usuarios` para cadastrar contas em seu nome. As senhas são armazenadas com bcrypt.
 
 Contas comuns recebem papel `USER` e não acessam as rotas administrativas. Elas podem consultar equipamentos disponíveis, abrir chamados em seu próprio nome e listar somente os próprios chamados em `/api/me/equipamentos` e `/api/me/chamados`.
 

@@ -25,16 +25,16 @@ export type AuthSession = {
 };
 
 const sessionStorageKey = "atende:auth-session";
+const apiUrl = import.meta.env.VITE_API_URL?.replace(/\/$/, "") ?? "";
 
-export async function loginAccount(email: string, password: string): Promise<LoginResponse> {
-  const apiUrl = import.meta.env.VITE_API_URL?.replace(/\/$/, "") ?? "";
+async function requestAuth(path: string, body: Record<string, string>): Promise<LoginResponse> {
   let response: Response;
 
   try {
-    response = await fetch(`${apiUrl}/auth/login`, {
+    response = await fetch(`${apiUrl}${path}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: email.trim().toLowerCase(), senha: password }),
+      body: JSON.stringify(body),
     });
   } catch {
     throw new Error("Não foi possível conectar à API de autenticação.");
@@ -80,6 +80,23 @@ export async function loginAccount(email: string, password: string): Promise<Log
   }
 
   return result as LoginResponse;
+}
+
+export function loginAccount(email: string, password: string): Promise<LoginResponse> {
+  return requestAuth("/auth/login", { email: email.trim().toLowerCase(), senha: password });
+}
+
+export function registerAccount(data: {
+  nome: string;
+  email: string;
+  setor: string;
+  telefone: string;
+  senha: string;
+}): Promise<LoginResponse> {
+  return requestAuth("/auth/register", {
+    ...data,
+    email: data.email.trim().toLowerCase(),
+  });
 }
 
 export function saveAuthSession(login: LoginResponse) {
@@ -134,7 +151,6 @@ export async function authenticatedRequest<T>(path: string, init: RequestInit = 
     throw new Error("Sua sessão expirou. Entre novamente.");
   }
 
-  const apiUrl = import.meta.env.VITE_API_URL?.replace(/\/$/, "") ?? "";
   const headers = new Headers(init.headers);
   headers.set("Authorization", `Bearer ${session.accessToken}`);
 
@@ -151,7 +167,7 @@ export async function authenticatedRequest<T>(path: string, init: RequestInit = 
     throw new Error("Sua sessão expirou. Entre novamente.");
   }
 
-  const result = response.status === 204 ? null : await response.json().catch(() => ({}));
+  const result = await response.json().catch(() => ({}));
 
   if (!response.ok) {
     throw new Error(result?.message ?? "Não foi possível concluir a operação.");

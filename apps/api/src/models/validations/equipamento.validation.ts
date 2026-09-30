@@ -17,5 +17,3 @@ export const atualizarEquipamentoSchema = z.object(equipamentoFields).partial();
 export const buscarEquipamentoSchema = z.object({
   id: z.coerce.number().int().positive("O ID do equipamento deve ser um número positivo"),
 });
-
-export const deletarEquipamentoSchema = buscarEquipamentoSchema;
