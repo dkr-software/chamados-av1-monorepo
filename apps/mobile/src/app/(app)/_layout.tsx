@@ -21,6 +21,7 @@ export default function AppTabs() {
       tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },
     }}>
       <Tabs.Screen name="index" options={{ title: "Meus chamados", tabBarLabel: "Chamados", tabBarIcon: ({ color, size, focused }) => <Ionicons name={focused ? "albums" : "albums-outline"} color={color} size={size} /> }} />
+      <Tabs.Screen name="statistics" options={{ title: "Estatísticas", tabBarLabel: "Estatísticas", tabBarIcon: ({ color, size, focused }) => <Ionicons name={focused ? "stats-chart" : "stats-chart-outline"} color={color} size={size} /> }} />
       <Tabs.Screen name="new-ticket" options={{ title: "Abrir chamado", tabBarLabel: "Novo", tabBarIcon: ({ color, size, focused }) => <Ionicons name={focused ? "add-circle" : "add-circle-outline"} color={color} size={size} /> }} />
       <Tabs.Screen name="account" options={{ title: "Minha conta", tabBarLabel: "Conta", tabBarIcon: ({ color, size, focused }) => <Ionicons name={focused ? "person-circle" : "person-circle-outline"} color={color} size={size} /> }} />
     </Tabs>
