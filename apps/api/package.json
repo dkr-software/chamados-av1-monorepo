@@ -5,12 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "prisma generate && tsx src/server.ts",
+    "dev:watch": "prisma generate && tsx watch src/server.ts",
     "build": "prisma generate && tsc --build",
     "start": "node dist/server.js",
+    "typecheck": "prisma generate && tsc --noEmit",
     "admin:seed": "tsx prisma/seed-admin.ts",
     "lint": "eslint \"src/**/*.{js,ts}\"",
     "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev"
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio"
   },
   "dependencies": {
     "@prisma/adapter-better-sqlite3": "^7.10.0",

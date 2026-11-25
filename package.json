@@ -4,13 +4,25 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
+    "mobile": "npm run dev --workspace mobile",
+    "mobile:android": "npm run android --workspace mobile",
+    "mobile:ios": "npm run ios --workspace mobile",
+    "mobile:build": "npm run build --workspace mobile",
+    "mobile:typecheck": "npm run typecheck --workspace mobile",
+    "mobile:doctor": "npm run doctor --workspace mobile",
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\""
   },
   "devDependencies": {
     "eslint": "10.9.1",
     "prettier": "3.9.6",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
     "turbo": "^2.11.5"
+  },
+  "overrides": {
+    "react-native-reanimated": "4.5.1",
+    "react-native-worklets": "0.10.1"
   },
   "engines": {
     "node": ">=24.20.0"

@@ -1,0 +1,47 @@
+{
+  "name": "mobile",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "main": "expo-router/entry",
+  "scripts": {
+    "dev": "expo start",
+    "dev:clear": "expo start --clear",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "doctor": "expo-doctor",
+    "build": "tsc --noEmit && expo export --platform android",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint \"src/**/*.{ts,tsx}\""
+  },
+  "dependencies": {
+    "@expo/ui": "~57.0.26",
+    "@expo/vector-icons": "^15.0.2",
+    "@hookform/resolvers": "^5.9.1",
+    "@react-navigation/bottom-tabs": "^7.4.0",
+    "expo": "~57.0.33",
+    "expo-constants": "~57.0.3",
+    "expo-font": "~57.0.0",
+    "expo-linking": "~57.0.14",
+    "expo-router": "~57.0.31",
+    "expo-secure-store": "~57.0.1",
+    "expo-splash-screen": "~57.0.11",
+    "expo-status-bar": "~57.0.1",
+    "react": "19.2.3",
+    "react-hook-form": "^7.89.0",
+    "react-native": "0.86.3",
+    "react-native-gesture-handler": "~2.32.0",
+    "react-native-reanimated": "4.5.1",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-screens": "~4.26.0",
+    "react-native-worklets": "0.10.1",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@repo/eslint-config": "*",
+    "@types/react": "~19.2.2",
+    "eslint": "10.9.1",
+    "expo-doctor": "^1.21.8",
+    "typescript": "~6.0.3"
+  }
+}

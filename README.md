@@ -41,22 +41,42 @@ O seed não altera contas se já existir um administrador. Remova `ADMIN_SENHA` 
 
 ## Desenvolvimento
 
-Inicie a interface e a API pela raiz:
+Inicie a interface, a API e o app móvel pela raiz:
 
 ```sh
 npm run dev
 ```
 
-A interface Vite fica disponível em `http://localhost:5173` e a API em `http://localhost:3000`. Para iniciar um app individual:
+A interface Vite fica disponível em `http://localhost:5173`, a API em `http://localhost:3000` e o Expo mostra o QR code no terminal. Para iniciar um app individual:
 
 ```sh
 npm run dev --workspace web
 npm run dev --workspace api
+npm run dev --workspace mobile
 ```
 
 ## Documentação da API
 
 Com a API em execução, acesse `http://localhost:3000/docs` para explorar e testar as rotas no Swagger UI. A especificação OpenAPI fica disponível em `http://localhost:3000/openapi.json`. Use o botão **Authorize** no Swagger UI com o JWT retornado por `POST /auth/login` para chamar as rotas protegidas.
+
+## Aplicativo móvel
+
+O workspace `mobile` usa Expo SDK 57 e TypeScript. Ele oferece cadastro e login de solicitantes, consulta dos próprios chamados, abertura de novos chamados e saída da conta. Para iniciar:
+
+```sh
+npm run dev --workspace mobile
+```
+
+At the repository root, the `mobile` shortcuts start the same app locally:
+
+```sh
+npm run mobile
+npm run mobile:android
+npm run mobile:ios
+npm run mobile:doctor
+```
+
+Configure `EXPO_PUBLIC_API_URL` em `apps/mobile/.env`. O padrão funciona no iOS Simulator (`localhost`) e no Android Emulator (`10.0.2.2`); em um aparelho físico, use o endereço LAN do computador e conecte ambos à mesma rede. Consulte [apps/mobile/README.md](apps/mobile/README.md) para detalhes.
 
 ## Autenticação
 

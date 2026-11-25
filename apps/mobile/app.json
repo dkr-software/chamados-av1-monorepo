@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "Atende",
+    "slug": "atende-mobile",
+    "scheme": "atende",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "br.com.chamados.atende"
+    },
+    "android": {
+      "package": "br.com.chamados.atende"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-splash-screen"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
